@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="32eb66ad-2c4f-4d35-9f6d-b740af3510b7" >
+		<email:smtp-connection host="smtp.gmail.com" port="587" user="ramesh.thombre@apisero.com" password="AOr@9552834556" >
+			<email:properties >
+				<email:property key="mail.smtp.starttls.enable" value="true" />
+			</email:properties>
+		</email:smtp-connection>
+	</email:smtp-config>
+	<flow name="get-employee-data-implementationFlow" doc:id="d14fb42b-78c9-4667-8791-5e8b99f03af4" >
+		<logger level="INFO" doc:name="Start - Logger" doc:id="d1b8f8cf-47b1-4b89-b235-55291d618d8d" message="Start - Logger" />
+		<http:request method="GET" doc:name="Call To Employee Back-End Service and database service" doc:id="ccda7014-012e-4a03-8a4e-4b29c74f317e" config-ref="HTTP_Request_configuration" path="${request.employee.path}" />
+		<parallel-foreach doc:name="For Each" doc:id="dfa5f85f-809d-4d54-8434-4eeb1f3941c3" >
+			<ee:transform doc:name="Transform Message vEmployeeData" doc:id="aad505dc-c2cc-4a02-aa2c-0eef3f487730">
+						<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+
+payload.data]]></ee:set-payload>
+						</ee:message>
+						<ee:variables>
+						</ee:variables>
+					</ee:transform>
+			<db:insert doc:name="Insert" doc:id="74ea57d2-2a88-44d7-b20b-4d2a12542c23" config-ref="Database_Config">
+				<db:sql >insert into employee(id, employee_name, employee_salary, employee_age, profile_image)
+values(:id, :employee_name, :employee_salary, :employee_age,  :profile_image)</db:sql>
+			</db:insert>
+		</parallel-foreach>
+		<logger level="INFO" doc:name="Batch End Logger" doc:id="e521b76a-4314-4de6-bb3d-9a6a2649916c" message="Batch End Logger"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="dc34d2b1-d417-4275-ae54-f475a7acc2e4" >
+				<ee:transform doc:name="Transform Message error description" doc:id="df8d1fd6-203d-4b8d-bcb8-0c1fb2258e97" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"error" : error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="end Logger" doc:id="1f6e02fe-9548-4f58-a732-38b2d09a497a" message="#[payload]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<sub-flow name="POST-employee-database-implementationSub_Flow" doc:id="0845cf00-97f3-49e6-8ec2-6f35e3489928" >
+		<logger level="INFO" doc:name="Logger" doc:id="8915fb8a-9e84-4f1f-9777-c7108b42caec" message="#[payload]"/>
+		<db:insert doc:name="Insert in datababse" doc:id="29524a61-a880-481d-be78-95c43dc66cb9" config-ref="Database_Config">
+			<db:sql >insert into employee(id, employee_name, employee_salary, employee_age, profile_image)
+values(:id, :employee_name, :employee_salary, :employee_age,  :profile_image)</db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	"id" : payload.id ,
+	"employee_name" : payload.employee_name,
+	"employee_salary" : payload.employee_salary,
+	"employee_age" : payload.employee_age ,
+	"profile_image": payload.profile_image 
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="a71753a2-1172-4286-a7d6-235edcdc6811" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "success"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="send email Flow Reference" doc:id="23ec2337-350e-4e3c-bed9-6762d50225e2" name="send-mail-implementationSub_Flow"/>
+		<logger level="INFO" doc:name="Logger" doc:id="0ccd54bd-8645-4dc1-b394-95941b3f88c0" />
+	</sub-flow>
+	<sub-flow name="send-mail-implementationSub_Flow" doc:id="fbb8f60b-0365-4d83-b23a-0203cece8cb9" >
+		<logger level="INFO" doc:name="Logger" doc:id="cea8fc2f-28ad-4277-88da-e942b76a8979" message="#[payload]"/>
+		<db:select doc:name="Select" doc:id="a1ab6f28-a4f2-4f7b-a4d5-e08ff89d2ef5" config-ref="Database_Config">
+			<db:sql >select * from employee;</db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message input data" doc:id="38b3ab7c-2bd1-497f-ae59-9417e865590d" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="vInputPayload" ><![CDATA[%dw 2.0
+output application/csv
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<email:send doc:id="7a775990-cf7f-455b-930f-df880bf3f0c5" config-ref="Email_SMTP" fromAddress="ramesh.thombre@apisero.com" subject="employee data">
+			<email:to-addresses >
+				<email:to-address value="ramesh.thombre@apisero.com" />
+			</email:to-addresses>
+			<email:attachments ><![CDATA[{
+	"file" : employee 
+}]]></email:attachments>
+		</email:send>
+		<logger level="INFO" doc:name="end Logger" doc:id="8e02129d-dfd0-4332-8f16-970a45ec9f42" message="end logger #[payload]"/>
+	</sub-flow>
+</mule>

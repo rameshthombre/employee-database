@@ -1,0 +1,16 @@
+http:
+  host: "0.0.0.0"
+  port: "8081"
+
+api-id: "15973972"
+request:
+  employee:
+    host: "dummy.restapiexample.com"
+    path: "api/v1/employees"
+
+db:
+  host: "![yvcqVf0+1aqv2T2feWRxJg==]"
+  port: "![/M0rjtjpG+0=]"
+  username: "![EcY0I/9ghK4KUJJUmxtlyg==]"
+  password: "![EcY0I/9ghK4KUJJUmxtlyg==]"
+  database: "![JK/Lvekt8DUTebRzmwIhSQ==]"

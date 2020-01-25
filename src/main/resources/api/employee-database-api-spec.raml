@@ -1,0 +1,33 @@
+#%RAML 1.0
+version: v1
+baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/b66b5347-b528-44c6-96be-55b5e4c31651/ # 
+title: Employee Database
+types:
+  Customer: !include datatype/EmployeeDataType.raml
+  CustomErrorMessage: !include datatype/EmployeeErrorMessageDataType.raml
+/employee:
+  get:
+    description: Retrieves employee details
+    displayName: Get employee
+    headers:
+      id:
+        type : number
+        required: false
+      employee_name:
+        type: string
+        required: false
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include examples/EmployeeExample.raml
+      404:
+        body:
+          application/json:
+            example: !include examples/EmployeeErrorMessageExample.raml
+  post:
+    description: post all employee details
+    displayName: Post all employee
+    body:
+      application/json:
+        example: !include examples/EmployeeExample.raml
